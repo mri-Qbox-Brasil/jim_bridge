@@ -11,11 +11,7 @@ files {
     'starter.lua',
     'shared/*.lua',
     'shared/make/*.lua',
-    'shared/auth/*.lua',
-    'shared/make/*.lua',
-    'shared/modules/*.lua',
     'shared/scaleforms/*.lua',
-    'shared/wrappers/*.lua',
 }
 
 -- Version checker
