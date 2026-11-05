@@ -33,7 +33,7 @@ Exports = {
 }
 
 -- Required variables
-debugMode = false
+debugMode = true
 
 QBInvNew = true
 
@@ -181,6 +181,7 @@ for _, v in pairs({ -- This is a specific load order
     'make/loaders.lua',
     'make/makeBlip.lua',
     'make/makePed.lua',
+    'make/pedTasks.lua',
     'make/makeProp.lua',
     'make/makeVeh.lua',
     'make/cameras.lua',
@@ -188,6 +189,7 @@ for _, v in pairs({ -- This is a specific load order
 
     'wrapperfunctions.lua',
     'polyZone.lua',
+    'clientItemAllowlist.lua',
     'itemcontrol.lua',
     'playerfunctions.lua',
     'metaHandlers.lua',
