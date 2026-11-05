@@ -14,6 +14,8 @@ local distPeds = {}
 ---@param scenario boolean (optional) String specifying the scenario the Ped should perform.
 ---@param anim table (optional) A table containing animation dictionary and name `{animDict, animName}`.
 ---@param synced boolean (optional) Boolean indicating whether the Ped is synced across clients. Default is `false`.
+---@param fade boolean (optional) Boolean indicating whether the Ped fades in. Default is `true`.
+---@param keepModel boolean (optional) Boolean indicating whether the model stays loaded after the Ped is made. Default is `false`.
 --
 ---@usage
 -- ```lua
@@ -58,7 +60,7 @@ end
 -- ```lua
 -- local ped = makePed(pedData, pedCoords, true, false, nil, {'animDict', 'animName'}, true)
 -- ```
-function makePed(data, coords, freeze, collision, scenario, anim, synced, fade)
+function makePed(data, coords, freeze, collision, scenario, anim, synced, fade, keepModel)
     local ped = nil
     local model = nil
     if type(data) == "table" then
@@ -129,7 +131,7 @@ function makePed(data, coords, freeze, collision, scenario, anim, synced, fade)
 
     SetEntityInvincible(ped, true)
     SetBlockingOfNonTemporaryEvents(ped, true)
-	FreezeEntityPosition(ped, freeze and freeze or true)
+	FreezeEntityPosition(ped, not (freeze == false))
 
     if collision then SetEntityNoCollisionEntity(ped, PlayerPedId(), false) end
     if scenario then TaskStartScenarioInPlace(ped, scenario, 0, true) end
@@ -142,8 +144,9 @@ function makePed(data, coords, freeze, collision, scenario, anim, synced, fade)
     else
         print("error ped")
     end
-    unloadModel(model)
-    Peds[keyGen()..keyGen()] = ped
+    -- if keep model is true, don't unload the model from cache, scripts that spawn alot of the same model end up causing issues.
+    if not keepModel then unloadModel(model) end
+    Peds[ped] = ped
     if fade ~= false and gameName ~= "rdr3" then
         SetEntityAlpha(ped, 0, false)
         CreateThread(function()
@@ -248,8 +251,9 @@ function GenerateRandomPedData(data)
 end
 
 onPlayerUnload(function()
-    for k in pairs(Peds) do
-        DeletePed(Peds[k])
+    for k, ped in pairs(Peds) do
+        if DoesEntityExist(ped) then DeletePed(ped) end
+        Peds[k] = nil
     end
     for i = 1, #distPeds do
         removeZoneTarget(distPeds[i])
@@ -259,7 +263,18 @@ end)
 
 --- Cleans up all created Peds when the resource stops.
 onResourceStop(function()
-    for k in pairs(Peds) do
-        DeletePed(Peds[k])
+    for k, ped in pairs(Peds) do
+        if DoesEntityExist(ped) then DeletePed(ped) end
+        Peds[k] = nil
     end
 end, true)
+
+-- Drop the peds that are already gone
+CreateThread(function()
+    while true do
+        Wait(5000)
+        for k, ped in pairs(Peds) do
+            if type(k) == "number" and not DoesEntityExist(ped) then Peds[k] = nil end
+        end
+    end
+end)
