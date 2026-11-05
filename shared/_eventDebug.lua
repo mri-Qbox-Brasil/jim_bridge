@@ -57,8 +57,8 @@ function RegisterNetEvent(name, funct)
 end
 
 function TriggerEvent(name, ...)
-    local data = {...}
     if Config.System.EventDebug then
+        local data = {...}
         if name:find("__cfx_export") then
             print("^6Bridge^7: "..GetPrintTime().." ^2Triggering ^3"..(isServer() and "Server" or "Client").." ^2Export^7: ^6"..name:gsub("__cfx_export_", ""):gsub("%:", "^7:^4").."^7"..getDebugInfo(debug.getinfo(2, "nSl")))
         else
@@ -74,8 +74,8 @@ function TriggerEvent(name, ...)
 end
 
 function TriggerServerEvent(name, ...) -- Client side, trigger a server event
-    local data = {...}
     if Config.System.EventDebug then
+        local data = {...}
         if name:find("__ox_cb") then
             print("^6Bridge^7: "..GetPrintTime().." ^2Triggered ^3Server ^2Callback: ^6"..name:gsub("__ox_cb_", "").."^7"..getDebugInfo(debug.getinfo(2, "nSl")))
         else
@@ -91,8 +91,8 @@ function TriggerServerEvent(name, ...) -- Client side, trigger a server event
 end
 
 function TriggerClientEvent(name, ...) -- Server side, trigger a client event
-    local data = {...}
     if Config.System.EventDebug then
+        local data = {...}
         if name:find("__ox_cb") then
             print("^6Bridge^7: "..GetPrintTime().." ^2Triggered ^3Client ^2Callback: ^6"..name:gsub("__ox_cb_", "").."^7"..getDebugInfo(debug.getinfo(2, "nSl")))
         else

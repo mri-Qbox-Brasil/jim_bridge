@@ -33,8 +33,9 @@ if not SUPPRESS_UPDATES then
     end
 
     local scriptName = ("^2"..capitalize(getScript()):gsub("%-", "^7-^2"):gsub("%_", "^7_^2")) or ""
-    local scriptVersion = ("^5"..GetResourceMetadata(getScript(), 'version', nil):gsub("%.", "^7.^5")) or ""
-    local scriptDescription = ("^2"..GetResourceMetadata(getScript(), 'description', nil)) or ""
+    local rawVersion = GetResourceMetadata(getScript(), 'version', nil) or "?"
+    local scriptVersion = ("^5"..rawVersion:gsub("%.", "^7.^5")) or ""
+    local scriptDescription = ("^2"..(GetResourceMetadata(getScript(), 'description', nil) or "")) or ""
     local scriptAuthor = ("^2by ^4"..GetResourceMetadata(getScript(), 'author', nil):gsub("%and", "^7and^4")) or ""
 
     print(scriptName.." ^7v"..scriptVersion.."^7 - "..scriptDescription.." "..scriptAuthor.."^7")

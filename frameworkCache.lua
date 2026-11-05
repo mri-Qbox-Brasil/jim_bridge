@@ -462,7 +462,7 @@ local invWeightTable = {
     [Exports.PSInv] =       { file = "config.lua",              path = { "MaxInventoryWeight" }, slotPath = { "MaxInventorySlots" } },
     [Exports.TgiannInv] =   { file = "configs/config.lua",      path = { "slotsMaxWeights", "player", "maxWeight" }, slotPath = { "slotsMaxWeights", "player", "slots" } },
     [Exports.CodeMInv] =    { file = "config/config.lua",       path = { "MaxWeight" }, slotPath = { "MaxSlots" } },
-    [Exports.RSGInv] =      { file = "config/config.lua",       path = { "MaxWeight" }, slotPath = { "MaxSlots" } },
+    [Exports.RSGInv] =      { file = "shared/config.lua",       path = { "MaxWeight" }, slotPath = { "MaxSlots" } },
     --[Exports.OrigenInv] = { file = "config.lua", path = { "MaxWeight" } },
 }
 
