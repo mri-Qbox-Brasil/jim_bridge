@@ -929,6 +929,31 @@ function getPlayer(source)
     return Player
 end
 
+--- Finds an online player by their citizen ID.
+---
+--- Iterates all connected players and returns the matching player info table
+--- (the same shape as getPlayer()). Returns nil if nobody matches.
+--- @param citizenId string The citizen ID to search for.
+--- @return table|nil player The matching player info table.
+--- @return number|nil src The matching player's server ID.
+---
+--- @usage
+--- ```lua
+--- local player, src = getPlayerByCitizenId("ABC12345")
+--- if player then print("Found", player.name) end
+--- ```
+function getPlayerByCitizenId(citizenId)
+    if not citizenId then return nil, nil end
+    for _, v in ipairs(GetPlayers()) do
+        local src = tonumber(v)
+        local Player = getPlayer(src)
+        if Player and Player.citizenId == citizenId then
+            return Player, src
+        end
+    end
+    return nil, nil
+end
+
 --- Retrieves all active players within a given radius from the specified coordinates.
 ---
 --- @param coords vector3 The reference coordinates.

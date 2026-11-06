@@ -80,6 +80,9 @@ function searchCar(vehicle)
                 carInfo.price = 0
                 carInfo.class = classlist[GetVehicleClass(vehicle) + 1], GetVehicleClass(vehicle)
             end
+            -- without this the function returned nil and anything doing
+            -- searchCar(vehicle).class would throw
+            return carInfo
         end
     else
         return carInfo
