@@ -1,4 +1,3 @@
-local time = 500
 
 --- Loads a specified model into memory.
 ---
@@ -11,16 +10,22 @@ local time = 500
 --- ```lua
 --- loadModel('prop_chair_01a')
 --- ```
-function loadModel(model)
-	if not IsModelValid(model) then print("^6Bridge^7: ^1ERROR^7: ^2Model^7 - '^6"..model.."^7' ^2does not exist in server") return
-	else
-		if not HasModelLoaded(model) then
-			debugPrint("^6Bridge^7: ^2Loading Model^7: '^6"..model.."^7'")
-			while not HasModelLoaded(model) and time > 0 do time -= 1 RequestModel(model) Wait(0) end
-			if not HasModelLoaded(model) then print("^6Bridge^7: ^3LoadModel^7: ^2Timed out loading model ^7'^6"..model.."^7'") end
-		end
-		time = 500
+function loadModel(model, timeout)
+	if not IsModelValid(model) then print("^6Bridge^7: ^1ERROR^7: ^2Model^7 - '^6"..model.."^7' ^2does not exist in server") return false end
+	if HasModelLoaded(model) then return true end
+
+	debugPrint("^6Bridge^7: ^2Loading Model^7: '^6"..model.."^7'")
+	local deadline = GetGameTimer() + (timeout or 10000)
+	while not HasModelLoaded(model) and GetGameTimer() < deadline do
+		RequestModel(model)
+		Wait(0)
 	end
+
+	if not HasModelLoaded(model) then
+		print("^6Bridge^7: ^3LoadModel^7: ^2Timed out loading model ^7'^6"..model.."^7'")
+		return false
+	end
+	return true
 end
 
 --- Unloads a model from memory.

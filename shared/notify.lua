@@ -117,8 +117,10 @@ function triggerNotify(title, message, type, src)
     end
 
     if src then
+        if Config.System.EventDebug then print(tostring(title).." - "..tostring(message).." - "..tostring(type).." - "..tostring(src)) end
         notifyFunc[Config.System.Notify].server(title, message, type, src)
     else
+        if Config.System.EventDebug then print(tostring(title).." - "..tostring(message).." - "..tostring(type).." - "..tostring(src)) end
         notifyFunc[Config.System.Notify].client(title, message, type)
     end
 end

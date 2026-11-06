@@ -29,7 +29,7 @@ function makeProp(data, freeze, synced, fade)
 
     debugPrint("^6Bridge^7: ^1Prop ^2Created^7: '^6"..prop.."^7' | ^2Hash^7: ^7'^6"..data.prop.."^7' | ^2Coord^7: "..formatCoord(data.coords))
     SetModelAsNoLongerNeeded(data.prop)
-    Props[keyGen()..keyGen()] = prop
+    Props[prop] = prop
     if fade ~= false and gameName ~= "rdr3" then
         SetEntityAlpha(prop, 0, false)
         CreateThread(function()
@@ -94,12 +94,14 @@ function destroyProp(entity)
             DetachEntity(entity, true, true)
         end
         DeleteObject(entity)
+        Props[entity] = nil
     end
 end
 
 onPlayerUnload(function()
-    for k in pairs(Props) do
-        DeleteObject(Props[k])
+    for k, prop in pairs(Props) do
+        if DoesEntityExist(prop) then DeleteObject(prop) end
+        Props[k] = nil
     end
     for i = 1, #distProps do
         removeZoneTarget(distProps[i])
@@ -109,7 +111,17 @@ end)
 
 --- Cleans up all created props when the resource stops.
 onResourceStop(function()
-    for k in pairs(Props) do
-        destroyProp(Props[k])
+    for k, prop in pairs(Props) do
+        destroyProp(prop)
     end
 end, true)
+
+-- Drop the props that are already gone
+CreateThread(function()
+    while true do
+        Wait(5000)
+        for k, prop in pairs(Props) do
+            if type(k) == "number" and not DoesEntityExist(prop) then Props[k] = nil end
+        end
+    end
+end)

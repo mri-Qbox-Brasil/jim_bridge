@@ -1489,6 +1489,10 @@ end
 --- ```
 function createUseableItem(item, funct)
     if doesItemExist(item) then
+        -- Record it in the client item registry. Items a script makes usable are
+        -- part of its own item definitions, so this keeps the registry dynamic.
+        if registerClientUseableItem then registerClientUseableItem(item) end
+
         local useableFunc = {
             {   framework = ESXExport,
                 func = function(item, funct)
@@ -1621,78 +1625,78 @@ end
 --- ```
 
 
+local MAX_ITEM_REQUEST = 1000
+
 RegisterNetEvent(getScript()..":server:toggleItem", function(give, item, amount, newsrc, info, slot, token)
     local excludeRes = {
         [QBExport] = true,
         [ESXExport] = true,
         [VorpExport] = true,
     }
-    local invokingRes = GetInvokingResource()
 
-    --debugPrint(GetInvokingResource())
-	if invokingRes and invokingRes ~= getScript() and not excludeRes[invokingRes] then
+    -- A client-triggered net event has no invoking resource.
+    local invokingRes = GetInvokingResource()
+    local isClient = (invokingRes == nil or invokingRes == "")
+
+    -- Server-side callers must be this resource or an allowed core.
+    if not isClient and invokingRes ~= getScript() and not excludeRes[invokingRes] then
         debugPrint("^1Error^7: ^1Possible exploit^7, ^1vital function was called from an external resource^7")
         return
     end
 
-    if not doesItemExist(item) then
-        print("^1Error^7 - ^2Tried to "..(tostring(give) == "true" and "add" or "remove").." '^3"..item.."^7' but it doesn't exist")
+    if type(item) ~= "string" or not doesItemExist(item) then
+        print("^1Error^7 - ^2Tried to "..(give and "add" or "remove").." '^3"..tostring(item).."^7' but it doesn't exist")
         return
     end
 
-    local src = (newsrc and tonumber(newsrc)) or source
+    local giveItem = (give == true or give == 1)
 
-    if (give == true or give == 1) then
-        if newsrc == nil then -- this must be coming from client this would be blank
+    -- Resolve the target. Clients may only ever affect themselves.
+    local src
+    if isClient then
+        src = source
+        if not src or src <= 0 then return end
+        if newsrc ~= nil then
+            print("^1Exploit^7: ^3"..tostring(src).." ^1tried to target another player through toggleItem^7")
+            return
+        end
+    else
+        src = (newsrc and tonumber(newsrc)) or source
+    end
+    if not src or src <= 0 then return end
+
+    -- Bound and validate the amount.
+    local reqAmount = tonumber(amount) or 1
+    if reqAmount ~= math.floor(reqAmount) or reqAmount <= 0 or reqAmount > MAX_ITEM_REQUEST then
+        print("^1Exploit^7: ^3"..tostring(src).." ^1sent an invalid amount to toggleItem^7: "..tostring(amount).." ("..(giveItem and "add" or "remove").." "..item..")")
+        return
+    end
+
+    if type(info) ~= "table" then info = nil end
+    if type(slot) ~= "number" then slot = nil end
+
+    local action = giveItem and "addItem" or "removeItem"
+    local invName = ""
+
+    if giveItem then
+        if isClient then
+            -- Single-use token (10 second expiry).
             if not checkToken(src, token, "item", item) then
                 return
             end
-        end
-    end
-
-    local action = (tostring(give) == "true" and "addItem" or "removeItem")
-    local remamount = amount or 1
-    if item == nil then return end
-
-    local invName = ""
-    if give == 0 or give == false then
-        if remamount < 0 then
-            print("^1Error^7: ^7src - ^1Client tried to remove a minus number of item ^7- "..item)
-            return
-        end
-        if not hasItem(item, amount or 1, src) then
-            dupeWarn(src, item, amount)
-
-        else
-            for i = 1, #InvFunc do
-                local inv = InvFunc[i]
-                if isStarted(inv.invName) then
-                    invName = inv.invName
-                    inv.removeItem(src, item, remamount)
-                    break
-                end
+            -- Only items this resource actually defines may be granted.
+            local allowedMax = isClientItemAllowed(item)
+            if not allowedMax then
+                print("^1Exploit^7: ^3"..tostring(src).." ^1requested ^3"..item.." ^1via toggleItem but it is not in this resource's item registry^7")
+                return
             end
-
-            -----
-            -- Fallback for if no inventory found:
-            -----
-            if invName == "" then
-                print("^4ERROR^7: No Supported Inventory detected - ^2Falling back to core functions")
-                if isStarted(QBExport) or isStarted(QBXExport) then -- if qbcore or qbxcore, just use core functions
-                    invName = isStarted(QBXExport) and QBXExport or isStarted(QBExport) and QBExport
-                    Core.Functions.GetPlayer(src).Functions.RemoveItem(item, remamount, slot)
-
-                elseif ESX and isStarted(ESXExport) then  -- if esx then use core functions
-                    invName = ESX
-                    ESX.GetPlayerFromId(src).removeInventoryItem(item, remamount)
-
-                end
-            else
-                debugPrint("^6Bridge^7: ^3"..action.."^7[^6"..invName.."^7] Player(^3"..src.."^7) "..getItemLabel(item).."("..item..") x"..(amount or 1))
+            if reqAmount > allowedMax then
+                print("^1Exploit^7: ^3"..tostring(src).." ^1requested x"..reqAmount.." of ^3"..item.." ^1(max ^3"..allowedMax.."^7)")
+                return
             end
         end
-    else
-        local amountToAdd = amount or 1
+
+        local amountToAdd = reqAmount
         for i = 1, #InvFunc do
             local inv = InvFunc[i]
             if isStarted(inv.invName) then
@@ -1713,7 +1717,39 @@ RegisterNetEvent(getScript()..":server:toggleItem", function(give, item, amount,
                 ESX.GetPlayerFromId(src).addInventoryItem(item, amountToAdd)
             end
         else
-            debugPrint("^6Bridge^7: ^3"..action.."^7[^6"..invName.."^7] Player(^3"..src.."^7) "..getItemLabel(item).."("..item..") x"..(amount or 1))
+            debugPrint("^6Bridge^7: ^3"..action.."^7[^6"..invName.."^7] Player(^3"..src.."^7) "..getItemLabel(item).."("..item..") x"..amountToAdd)
+        end
+    else
+        if not hasItem(item, reqAmount, src) then
+            dupeWarn(src, item, amount)
+
+        else
+            for i = 1, #InvFunc do
+                local inv = InvFunc[i]
+                if isStarted(inv.invName) then
+                    invName = inv.invName
+                    inv.removeItem(src, item, reqAmount)
+                    break
+                end
+            end
+
+            -----
+            -- Fallback for if no inventory found:
+            -----
+            if invName == "" then
+                print("^4ERROR^7: No Supported Inventory detected - ^2Falling back to core functions")
+                if isStarted(QBExport) or isStarted(QBXExport) then -- if qbcore or qbxcore, just use core functions
+                    invName = isStarted(QBXExport) and QBXExport or isStarted(QBExport) and QBExport
+                    Core.Functions.GetPlayer(src).Functions.RemoveItem(item, reqAmount, slot)
+
+                elseif ESX and isStarted(ESXExport) then  -- if esx then use core functions
+                    invName = ESX
+                    ESX.GetPlayerFromId(src).removeInventoryItem(item, reqAmount)
+
+                end
+            else
+                debugPrint("^6Bridge^7: ^3"..action.."^7[^6"..invName.."^7] Player(^3"..src.."^7) "..getItemLabel(item).."("..item..") x"..reqAmount)
+            end
         end
     end
 end)
@@ -1732,8 +1768,11 @@ end)
 --- dupeWarn(playerId, "health_potion")
 --- ```
 function dupeWarn(src, item, message)
-    local name = getPlayer(src).name
-    print(message or "^5DupeWarn^7: "..name.." (^1"..tostring(src).."^7) ^2Tried to remove item '^3"..item.."^7'^2 but it wasn't there^7")
+    src = tonumber(src)
+    if not src or src <= 0 then return end
+    local player = getPlayer(src)
+    local name = (player and player.name) or ("Unknown("..tostring(src)..")")
+    print(message or "^5DupeWarn^7: "..name.." (^1"..tostring(src).."^7) ^2Tried to remove item '^3"..tostring(item).."^7'^2 but it wasn't there^7")
     if not debugMode then
         DropPlayer(src, name.."("..tostring(src)..") kicked by exploit protection")
     end
